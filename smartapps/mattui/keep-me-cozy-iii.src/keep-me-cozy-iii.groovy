@@ -80,12 +80,13 @@ def temperatureHandler(evt)
 
 private evaluate()
 {
-	if (sensor) {
+    def contactState = contact.currentState("contact")
+    
+	if (sensor && contactState.value != "open") {
 		def threshold = 1.0
 		def tm = thermostat.currentThermostatMode
 		def ct = thermostat.currentTemperature
-        def contactState = contact.currentState("contact")
-		def currentTemp = contactState.value == "open" ? thermostat.currentTemperature : sensor.currentTemperature
+		def currentTemp = sensor.currentTemperature
 		log.trace("evaluate:, mode: $tm -- temp: $ct, heat: $thermostat.currentHeatingSetpoint, cool: $thermostat.currentCoolingSetpoint -- "  +
 			"sensor: $currentTemp, heat: $heatingSetpoint, cool: $coolingSetpoint")
 		if (tm in ["cool","auto"]) {
