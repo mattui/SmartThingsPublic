@@ -27,6 +27,7 @@ definition(
 
 preferences {
 	section("When any of the following devices trigger..."){
+	    input "button", "capability.button", title: "Button Pushed?", required: false, multiple: true
 		input "motion", "capability.motionSensor", title: "Motion Sensor?", required: false
 		input "contact", "capability.contactSensor", title: "Contact Sensor?", required: false
 		input "acceleration", "capability.accelerationSensor", title: "Acceleration Sensor?", required: false
@@ -57,6 +58,9 @@ def updated() {
 }
 
 def subscribe() {
+	if (button) {
+	    subscribe(button, "button.pushed", buttonHandler)
+    }
 	if (contact) {
 		subscribe(contact, "contact.open", contactOpenHandler)
 	}
@@ -72,6 +76,11 @@ def subscribe() {
 	if (myPresence) {
 		subscribe(myPresence, "presence", presenceHandler)
 	}
+}
+
+def buttonHandler(evt) {
+	log.debug "button $evt.value"
+	flashLights()
 }
 
 def motionActiveHandler(evt) {
@@ -147,4 +156,3 @@ private flashLights() {
 		}
 	}
 }
-
