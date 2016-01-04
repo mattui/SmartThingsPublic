@@ -63,6 +63,7 @@ def subscribeToEvents()
 		subscribe(sensor, "temperature", temperatureHandler)
 		subscribe(thermostat, "temperature", temperatureHandler)
 		subscribe(thermostat, "thermostatMode", temperatureHandler)
+        subscribe(contact, "contact", temperatureHandler)
 	}
 	evaluate()
 }
