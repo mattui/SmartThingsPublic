@@ -59,24 +59,37 @@ def updated(settings) {
 }
 
 def initialize() {
-	schedule(weekdayWakeTime, "evaluate")
-	schedule(weekdayLeaveTime, "evaluate")
-	schedule(weekdayReturnTime, "evaluate")
-	schedule(weekdaySleepTime, "evaluate")
-	schedule(weekendWakeTime, "evaluate")
-	schedule(weekendLeaveTime, "evaluate")
-	schedule(weekendReturnTime, "evaluate")
-	schedule(weekendSleepTime, "evaluate")
+	schedule(weekdayWakeTime, "scheduleCallback")
+	schedule(weekdayLeaveTime, "scheduleCallback")
+	schedule(weekdayReturnTime, "scheduleCallback")
+	schedule(weekdaySleepTime, "scheduleCallback")
+	schedule(weekendWakeTime, "scheduleCallback")
+	schedule(weekendLeaveTime, "scheduleCallback")
+	schedule(weekendReturnTime, "scheduleCallback")
+	schedule(weekendSleepTime, "scheduleCallback")
     
     subscribe(location, changedLocationMode)
 	if (contact) {
-		subscribe(sensor, "temperature", temperatureHandler)
-		subscribe(thermostat, "temperature", temperatureHandler)
-		subscribe(thermostat, "thermostatMode", temperatureHandler)
         subscribe(contact, "contact", temperatureHandler)
 	}
     
     evaluate()
+}
+
+def changedLocationMode(evt)
+{
+	log.debug "changedLocationMode mode: $evt.value, heat: $heat, cool: $cool"
+	evaluate()
+}
+
+def temperatureHandler(evt)
+{
+	evaluate()
+}
+
+def scheduleCallback()
+{
+	evaluate()
 }
 
 def isWeekday() {
@@ -85,7 +98,7 @@ def isWeekday() {
     return ((dow >= Calendar.MONDAY) && (dow <= Calendar.FRIDAY))
 }
 
-def evaluate() {
+private evaluate() {
 	if (isWeekday()) {
         if (timeOfDayIsBetween(weekdayWakeTime, weekdayLeaveTime, new Date(), location.timeZone)) {
             setTemp(weekdayWakeHeat, weekdayWakeCool)
