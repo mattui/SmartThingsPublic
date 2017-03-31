@@ -8,42 +8,67 @@ definition(
     	iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Meta/temp_thermo@2x.png")
 
 preferences {
-	section("Choose thermostat (s)") {
-		input(name: "thermostats", type: "capability.thermostat", required: true, multiple:true)
-	}
+	page(name: "pageOne", title: "Which thermostat(s) should be controlled?", nextPage: "pageTwo", uninstall: true) {
+        section("Choose thermostat(s)") {
+            input(name: "thermostats", type: "capability.thermostat", required: true, multiple:true)
+        }
 
-	section("Monday to Friday Schedule") {
-		input(name: "weekdayWakeTime", type: "time", title: "Wake Time", required: true)
-		input(name: "weekdayWakeHeat", type: "number", title: "Wake Heat Temp", required: true)
-		input(name: "weekdayWakeCool", type: "number", title: "Wake Cool Temp", required: true)
-		input(name: "weekdayLeaveTime", type: "time", title: "Leave Time", required: true)
-		input(name: "weekdayLeaveHeat", type: "number", title: "Leave Heat Temp", required: true)
-		input(name: "weekdayLeaveCool", type: "number", title: "Leave Cool Temp", required: true)
-		input(name: "weekdayReturnTime", type: "time", title: "Return Time", required: true)
-		input(name: "weekdayReturnHeat", type: "number", title: "Return Heat Temp", required: true)
-		input(name: "weekdayReturnCool", type: "number", title: "Return Cool Temp", required: true)
-		input(name: "weekdaySleepTime", type: "time", title: "Sleep Time", required: true)
-		input(name: "weekdaySleepHeat", type: "number", title: "Sleep Heat Temp", required: true)
-		input(name: "weekdaySleepCool", type: "number", title: "Sleep Cool Temp", required: true)
-	}
-	section("Saturday and Sunday Schedule") {
-		input(name: "weekendWakeTime", type: "time", title: "Wake Time", required: true)
-		input(name: "weekendWakeHeat", type: "number", title: "Wake Heat Temp", required: true)
-		input(name: "weekendWakeCool", type: "number", title: "Wake Cool Temp", required: true)
-		input(name: "weekendLeaveTime", type: "time", title: "Leave Time", required: true)
-		input(name: "weekendLeaveHeat", type: "number", title: "Leave Heat Temp", required: true)
-		input(name: "weekendLeaveCool", type: "number", title: "Leave Cool Temp", required: true)
-		input(name: "weekendReturnTime", type: "time", title: "Return Time", required: true)
-		input(name: "weekendReturnHeat", type: "number", title: "Return Heat Temp", required: true)
-		input(name: "weekendReturnCool", type: "number", title: "Return Cool Temp", required: true)
-		input(name: "weekendSleepTime", type: "time", title: "Sleep Time", required: true)
-		input(name: "weekendSleepHeat", type: "number", title: "Sleep Heat Temp", required: true)
-		input(name: "weekendSleepCool", type: "number", title: "Sleep Cool Temp", required: true)
+        section("(Optional) Is active when...", hideable: true, hidden: contact) {
+            input(name: "contact", type: "capability.contactSensor", title: "Door or window")
+            input(name: "sensorAction", type: "enum", title: "is", options: ["open", "closed"], required: true, defaultValue: "open")
+        }
+    }
+
+	page(name: "pageTwo", title: "Monday to Friday Schedule", nextPage: "pageThree") {
+    	section("When I Wakeup") {
+            input(name: "weekdayWakeTime", type: "time", title: "Wake Time", required: true)
+            input(name: "weekdayWakeHeat", type: "number", title: "Wake Heat Temp", required: true)
+            input(name: "weekdayWakeCool", type: "number", title: "Wake Cool Temp", required: true)
+        }
+        
+    	section("When I Leave") {
+            input(name: "weekdayLeaveTime", type: "time", title: "Leave Time", required: true)
+            input(name: "weekdayLeaveHeat", type: "number", title: "Leave Heat Temp", required: true)
+            input(name: "weekdayLeaveCool", type: "number", title: "Leave Cool Temp", required: true)
+        }
+        
+    	section("When I Return") {
+            input(name: "weekdayReturnTime", type: "time", title: "Return Time", required: true)
+            input(name: "weekdayReturnHeat", type: "number", title: "Return Heat Temp", required: true)
+            input(name: "weekdayReturnCool", type: "number", title: "Return Cool Temp", required: true)
+        }
+        
+    	section("When I Sleep") {
+            input(name: "weekdaySleepTime", type: "time", title: "Sleep Time", required: true)
+            input(name: "weekdaySleepHeat", type: "number", title: "Sleep Heat Temp", required: true)
+            input(name: "weekdaySleepCool", type: "number", title: "Sleep Cool Temp", required: true)
+        }
 	}
     
-    section("(Optional) Is active when...", hideable: true, hidden: true) {
-		input(name: "contact", type: "capability.contactSensor", title: "Door or window")
-        input(name: "sensorAction", type: "enum", title: "is", options: ["open", "closed"], required: true, defaultValue: "open")
+	page(name: "pageThree", title: "Saturday and Sunday Schedule", install: true, uninstall: true) {
+    	section("When I Wakeup") {
+            input(name: "weekendWakeTime", type: "time", title: "Wake Time", required: true)
+            input(name: "weekendWakeHeat", type: "number", title: "Wake Heat Temp", required: true)
+            input(name: "weekendWakeCool", type: "number", title: "Wake Cool Temp", required: true)
+        }
+        
+    	section("When I Leave") {
+            input(name: "weekendLeaveTime", type: "time", title: "Leave Time", required: true)
+            input(name: "weekendLeaveHeat", type: "number", title: "Leave Heat Temp", required: true)
+            input(name: "weekendLeaveCool", type: "number", title: "Leave Cool Temp", required: true)
+        }
+        
+    	section("When I Return") {
+            input(name: "weekendReturnTime", type: "time", title: "Return Time", required: true)
+            input(name: "weekendReturnHeat", type: "number", title: "Return Heat Temp", required: true)
+            input(name: "weekendReturnCool", type: "number", title: "Return Cool Temp", required: true)
+        }
+        
+    	section("When I Sleep") {
+            input(name: "weekendSleepTime", type: "time", title: "Sleep Time", required: true)
+            input(name: "weekendSleepHeat", type: "number", title: "Sleep Heat Temp", required: true)
+            input(name: "weekendSleepCool", type: "number", title: "Sleep Cool Temp", required: true)
+        }
 	}
 }
 
