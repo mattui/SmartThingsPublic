@@ -37,7 +37,7 @@ def selectActions() {
         // sort them alphabetically
             actions.sort()
             section("Hello Home Actions") {
-                log.trace actions
+                //log.trace actions
                 // use the actions as the options for an enum input
                 input "action", "enum", title: "Select an action to execute", options: actions
             }
@@ -99,5 +99,5 @@ void switchModes()
 	def minutes = (openThreshold != null && openThreshold != "") ? openThreshold : 10
 	def msg = "${contact.displayName} has been left open for ${minutes} minutes. Switching to ${targetMode}."
 	log.info msg
-    location.helloHome.execute(routine)
+    location.helloHome.execute(action)
 }
