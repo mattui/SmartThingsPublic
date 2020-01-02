@@ -4,9 +4,10 @@
  *  Copyright © 2018 Michael Struck
  *  Original Author: Matt Lebaugh (@mlebaugh)
  *
- *  Version 1.0.4 10/18/18 
+ *  Version 1.0.5 12/4/18 
  *
- *  Version 1.0.4 (10/18/18) - Skipped 1.0.4 to maintain consistency with dimmer code version. Changed to triple push for special options
+ *  Version 1.0.5 (12/4/18) - Removed logging to reduce Zwave traffic; optimized button triple press
+ *  Version 1.0.4b (10/18/18) - Skipped 1.0.4 to maintain consistency with dimmer code version. Changed to triple push for special options
  *  Version 1.0.2 (8/2/18) - Updated some of the text/options on the Settings page
  *  Version 1.0.1 (7/15/18) - Format and syntax updates. Thanks to @Darwin for the motion sensitivity/timeout minutes idea!
  *  Version 1.0.0 (3/17/17)- Original release by Matt Lebaugh. Great Work!
@@ -22,7 +23,7 @@
  *
  */
 metadata {
-	definition (name: "GE Motion Switch 26931", namespace: "MichaelStruck", author: "Michael Struck") {
+	definition (name: "GE Motion Switch 26931", namespace: "MichaelStruck", author: "Michael Struck", mnmn:"SmartThings", vid: "generic-switch") {
 		capability "Motion Sensor"
         capability "Actuator"
  		capability "Switch"
@@ -141,8 +142,7 @@ metadata {
             )
             input (
             type: "paragraph", element: "paragraph", title: "",
-            description: "**Configure Association Groups**\nDevices in association group 2 will receive Basic Set commands directly from the switch when it is turned on or off. Use this to control another device as if it was connected to this switch.\n\n" +
-                         "Devices in association group 3 will receive Basic Set commands directly from the switch when it is double tapped up or down.\n\n" +
+            description: "**Configure Association Groups**\nDevices in association groups 2 & 3 will receive Basic Set commands directly from the switch when it is turned on or off (physically or locally through the motion detector). Use this to control other devices as if they was connected to this switch.\n\n" +
                          "Devices are entered as a comma delimited list of the Device Network IDs in hexadecimal format."
         	)
         	input (name: "requestedGroup2", title: "Association Group 2 Members (Max of 5):", description: "Use the 'Device Network ID' for each device", type: "text", required: false )
@@ -176,14 +176,14 @@ metadata {
 def parse(String description) {
     def result = null
 	if (description != "updated") {
-		log.debug "parse() >> zwave.parse($description)"
+		//log.debug "parse() >> zwave.parse($description)"
 		def cmd = zwave.parse(description, [0x20: 1, 0x25: 1, 0x56: 1, 0x70: 2, 0x72: 2, 0x85: 2, 0x71: 3])
 		if (cmd) {
 			result = zwaveEvent(cmd)
         }
 	}
     if (!result) { log.warn "Parse returned ${result} for $description" }
-    else {log.debug "Parse returned ${result}"}
+    //else {log.debug "Parse returned ${result}"}
 	return result
 	if (result?.name == 'hail' && hubFirmwareLessThan("000.011.00602")) {
 		result = [result, response(zwave.basicV1.basicGet())]
@@ -204,17 +204,19 @@ def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
 	[name: "switch", value: cmd.value ? "on" : "off", type: "physical"]
 }
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicSet cmd) {
-    log.debug "---BASIC SET V1--- ${device.displayName} sent ${cmd}"
+    //log.debug "---BASIC SET V1--- ${device.displayName} sent ${cmd}"
     def result = []
     result << createEvent([name: "switch", value: cmd.value ? "on" : "off", type: "physical"])
     if (cmd.value == 255) {
         result << createEvent([name: "button", value: "pushed", data: [buttonNumber: "1"], descriptionText: "On/Up on (button 1) $device.displayName was pushed", isStateChange: true, type: "physical"])
     	if (timeoutdurationPress){
-        	if (!state.onCounter || state.onCounter >3) state.onCounter=0
+        	if (modeOverride) state.offCounter=0
+            if (!state.onCounter || state.onCounter > 2 || (now()-state.Timer) > 10000) state.onCounter=0
             state.onCounter = state.onCounter + 1
-            if (state.onCounter==1) state.Timer=now() 
+            if (state.onCounter==1) state.Timer=now()
+            log.debug "On button push:" + state.onCounter 
         	if (state.onCounter==3 && (now()-state.Timer)<10000) {
-                log.info "Triple press in less than 10 seconds-Overriding timeout"
+                log.info "Triple press of on button in less than 10 seconds - Overriding timeout"
                 def cmds=[]
                 cmds << zwave.configurationV1.configurationSet(configurationValue: [timeoutdurationPress.toInteger()], parameterNumber: 1, size: 1)
                 cmds << zwave.configurationV1.configurationGet(parameterNumber: 1)
@@ -226,11 +228,13 @@ def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicSet cmd) {
 	else if (cmd.value == 0) {
     	result << createEvent([name: "button", value: "pushed", data: [buttonNumber: "2"], descriptionText: "Off/Down (button 2) on $device.displayName was pushed", isStateChange: true, type: "physical"])
     	if (modeOverride) {
-        	if (!state.offCounter || state.offCounter >3 ) state.offCounter=0
+        	if (timeoutdurationPress) state.onCounter=0
+            if (!state.offCounter || state.offCounter >2 || (now()-state.timerOff)>10000) state.offCounter=0
             state.offCounter = state.offCounter + 1
             if (state.offCounter==1) state.timerOff=now()
+            log.debug "Off button push:" + state.offCounter
             if (state.offCounter==3 && (now()-state.timerOff)<10000) {
-                log.info "Triple press in less than 10 seconds-Overriding mode"
+                log.info "Triple press of off button in less than 10 seconds - Overriding mode"
                 def cmds=[]
                 cmds << zwave.configurationV1.configurationSet(configurationValue: [modeOverride.toInteger()], parameterNumber: 3, size: 1)
                 cmds << zwave.configurationV1.configurationGet(parameterNumber: 3)
@@ -255,7 +259,7 @@ def zwaveEvent(physicalgraph.zwave.commands.associationv2.AssociationReport cmd)
     }
 }
 def zwaveEvent(physicalgraph.zwave.commands.configurationv2.ConfigurationReport cmd) {
-	log.debug "---CONFIGURATION REPORT V2--- ${device.displayName} sent ${cmd}"
+	//log.debug "---CONFIGURATION REPORT V2--- ${device.displayName} sent ${cmd}"
     def config = cmd.scaledConfigurationValue
     def result = []
     if (cmd.parameterNumber == 1) {
@@ -288,7 +292,7 @@ def zwaveEvent(physicalgraph.zwave.commands.configurationv2.ConfigurationReport 
    return result
 }
 def zwaveEvent(physicalgraph.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
-    log.debug "---BINARY SWITCH REPORT V1--- ${device.displayName} sent ${cmd}"
+    //log.debug "---BINARY SWITCH REPORT V1--- ${device.displayName} sent ${cmd}"
     if (cmd.value==0 && timeoutdurationPress){
     	log.info "Resetting timeout duration"
         def cmds=[],timeoutValue = timeoutduration ? timeoutduration.toInteger() : 5
@@ -513,7 +517,7 @@ def updated() {
     //association groups
 	def nodes = []
 	if (settings.requestedGroup2 != state.currentGroup2) {
-    	nodes = parseAssocGroupList(settings.requestedGroup2, 2)
+        nodes = parseAssocGroupList(settings.requestedGroup2, 2)
         cmds << zwave.associationV2.associationRemove(groupingIdentifier: 2, nodeId: [])
         cmds << zwave.associationV2.associationSet(groupingIdentifier: 2, nodeId: nodes)
         cmds << zwave.associationV2.associationGet(groupingIdentifier: 2)
@@ -554,7 +558,7 @@ private parseAssocGroupList(list, group) {
             else if (node.matches("\\p{XDigit}+")) {
                 def nodeId = Integer.parseInt(node,16)
                 if (nodeId == zwaveHubNodeId) {
-                	log.warn "Association Group ${group}: Adding the hub as an association is not allowed (it would break double-tap)."
+                	log.warn "Association Group ${group}: Adding the hub as an association is not allowed."
                 }
                 else if ( (nodeId > 0) & (nodeId < 256) ) {
                     nodes << nodeId
@@ -591,4 +595,4 @@ def showDashboard(timeDelay, motionSensor, lightSensor) {
 	result +="\n${timeSync} Timeout Duration: " + timeDelayTxt
 	sendEvent (name:"dashboard", value: result ) 
 }
-def showVersion() { sendEvent (name: "about", value:"DTH Version 1.0.4 (10/18/18)") }
+def showVersion() { sendEvent (name: "about", value:"DTH Version 1.0.5 (12/04/18)") }
